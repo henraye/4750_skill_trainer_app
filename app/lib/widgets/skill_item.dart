@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../screens/skill_roadmap_screen.dart';
-import '../models/skill.dart';
 
 class SkillItem extends StatelessWidget {
   final String letter;
   final String level;
   final String skillName;
+  final List<String>? roadmap;
   final VoidCallback onRemove;
 
   const SkillItem({
@@ -13,22 +13,27 @@ class SkillItem extends StatelessWidget {
     required this.letter,
     required this.level,
     required this.skillName,
+    required this.roadmap,
     required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SkillRoadmapScreen(
-              skill: Skill(name: skillName, level: level),
-            ),
-          ),
-        );
-      },
+      onTap: roadmap != null
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SkillRoadmapScreen(
+                    skillName: skillName,
+                    level: level,
+                    roadmap: roadmap!,
+                  ),
+                ),
+              );
+            }
+          : null,
       child: Container(
         padding: const EdgeInsets.all(16.0),
         child: Row(

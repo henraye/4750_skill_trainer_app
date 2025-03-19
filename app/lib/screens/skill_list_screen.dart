@@ -118,6 +118,7 @@ class _SkillListScreenState extends State<SkillListScreen> {
                               letter: skill.name[0],
                               level: skill.level,
                               skillName: skill.name,
+                              roadmap: skill.roadmap,
                               onRemove: () => _removeSkill(index),
                             );
                           },

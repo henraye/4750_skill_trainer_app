@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/main_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
+  try {
+    await SharedPreferences.getInstance();
+  } catch (e) {
+    debugPrint('SharedPreferences initialization failed: $e');
+  }
+
   runApp(const MyApp());
 }
 

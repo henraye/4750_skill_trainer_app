@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import '../models/skill.dart';
+import '../services/auth_service.dart';
+import 'auth/sign_in_screen.dart';
+import 'auth/create_account_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final String username;
-  final String email;
   final List<Skill> skills;
+  final _authService = AuthService();
 
-  const ProfileScreen({
+  ProfileScreen({
     super.key,
-    this.username = 'test_user1',
-    this.email = 'example123@gmail.com',
     required this.skills,
   });
 
   @override
   Widget build(BuildContext context) {
+    final user = _authService.currentUser;
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
@@ -31,86 +33,108 @@ class ProfileScreen extends StatelessWidget {
                   color: Color(0xFFFFD9E2),
                   shape: BoxShape.circle,
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 60,
-                    color: Color(0xFF6B2D40),
-                  ),
+                child: Center(
+                  child: user != null
+                      ? Text(
+                          user.email?[0].toUpperCase() ?? '?',
+                          style: const TextStyle(
+                            fontSize: 60,
+                            color: Color(0xFF6B2D40),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.person_outline,
+                          size: 60,
+                          color: Color(0xFF6B2D40),
+                        ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Username
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  username,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1D1B20),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () {
-                    // TODO: Implement edit username
-                  },
-                  icon: const Icon(
-                    Icons.edit,
-                    size: 20,
-                    color: Color(0xFF49454F),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Email Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+            if (user != null) ...[
+              // User Info
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    Text(
+                      user.email ?? '',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF1D1B20),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    OutlinedButton(
+                      onPressed: () async {
+                        try {
+                          await _authService.signOut();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Signed out')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString())),
+                            );
+                          }
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        side: const BorderSide(color: Color(0xFF6750A4)),
+                      ),
+                      child: const Text('Sign Out'),
                     ),
                   ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Email',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF49454F),
-                        ),
+              ),
+            ] else ...[
+              // Auth Buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SignInScreen(),
+                          ),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF6750A4),
+                        minimumSize: const Size(double.infinity, 48),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        email,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF1D1B20),
-                        ),
+                      child: const Text('Sign In'),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CreateAccountScreen(),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        side: const BorderSide(color: Color(0xFF6750A4)),
                       ),
-                    ],
-                  ),
+                      child: const Text('Create Account'),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+            ],
+            const SizedBox(height: 24),
 
             // Skills Section
             Padding(

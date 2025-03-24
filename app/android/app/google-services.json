@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044596043012",
+    "project_id": "skill-trainer-app",
+    "storage_bucket": "skill-trainer-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044596043012:android:68d2423e217b8f92653451",
+        "android_client_info": {
+          "package_name": "com.hentran.my_first_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoT5Pt2EanmMUzQLMgESKNNUJJvFUAiTs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

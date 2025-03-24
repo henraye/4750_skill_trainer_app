@@ -13,10 +13,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  final List<Skill> _skills = [
-    Skill(name: 'Java', level: 'Beginner'),
-    Skill(name: 'Python', level: 'Intermediate'),
-  ];
+  final List<Skill> _skills = [];
 
   void _onItemTapped(int index) {
     setState(() {

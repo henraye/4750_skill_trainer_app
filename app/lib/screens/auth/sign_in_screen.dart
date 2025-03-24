@@ -26,11 +26,20 @@ class _SignInScreenState extends State<SignInScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await _authService.signInWithEmailAndPassword(
+        final user = await _authService.signInWithEmailAndPassword(
           _emailController.text.trim(),
           _passwordController.text,
         );
-        if (mounted) Navigator.pop(context);
+
+        if (mounted && user != null) {
+          // Pop back to root and switch to profile tab
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Signed in successfully')),
+            );
+          }
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

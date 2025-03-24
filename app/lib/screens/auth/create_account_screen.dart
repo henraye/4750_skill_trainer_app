@@ -28,11 +28,20 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await _authService.createAccountWithEmailAndPassword(
+        final user = await _authService.createAccountWithEmailAndPassword(
           _emailController.text.trim(),
           _passwordController.text,
         );
-        if (mounted) Navigator.pop(context);
+
+        if (mounted && user != null) {
+          // Pop back to root and switch to profile tab
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Account created successfully')),
+            );
+          }
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

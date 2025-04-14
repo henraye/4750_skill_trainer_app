@@ -3,12 +3,7 @@ import '../models/skill.dart';
 import 'profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  final List<Skill> skills;
-
-  const SettingsScreen({
-    super.key,
-    required this.skills,
-  });
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();

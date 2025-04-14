@@ -6,6 +6,7 @@ import 'roadmap_cache_service.dart';
 
 class OpenAIService {
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
+  static const String _moderationUrl = 'https://api.openai.com/v1/moderations';
   final _cacheService = RoadmapCacheService();
 
   String get _apiKey {
@@ -14,6 +15,41 @@ class OpenAIService {
       throw Exception('OpenAI API key not found in environment variables');
     }
     return apiKey;
+  }
+
+  Future<bool> checkContentModeration(String content) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_moderationUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode({
+          'input': content,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final results = data['results'] as List;
+        if (results.isNotEmpty) {
+          final result = results[0];
+          // Check if any category is flagged
+          final categories = result['categories'] as Map<String, dynamic>;
+          return !categories.values.any((value) => value == true);
+        }
+        return true;
+      } else {
+        print('Moderation API Error: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception(
+            'Failed to check content moderation: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error checking content moderation: $e');
+      throw Exception('Failed to check content moderation: $e');
+    }
   }
 
   Future<List<String>> generateRoadmap(String skillName, String level) async {

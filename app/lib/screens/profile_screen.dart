@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import '../models/skill.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import 'auth/sign_in_screen.dart';
 import 'auth/create_account_screen.dart';
 import 'settings_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
-  final List<Skill> skills;
-  final _authService = AuthService();
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
-  ProfileScreen({
-    super.key,
-    required this.skills,
-  });
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _authService = AuthService();
+  final _firestoreService = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
@@ -141,46 +144,96 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // Skills Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                if (user != null)
+                  StreamBuilder<List<Skill>>(
+                    stream: _firestoreService.getSkills(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(
+                                'Error loading skills: ${snapshot.error}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final skills = snapshot.data ?? [];
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Skills',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF49454F),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (skills.isEmpty)
+                                  const Text(
+                                    'No skills added yet',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF1D1B20),
+                                    ),
+                                  )
+                                else
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: skills.map((skill) {
+                                      return Chip(
+                                        label: Text(skill.name),
+                                        backgroundColor:
+                                            const Color(0xFFE8DEF8),
+                                      );
+                                    }).toList(),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Skills',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF49454F),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            skills.map((s) => s.name).join(', '),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF1D1B20),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                ),
               ],
             ),
           ),

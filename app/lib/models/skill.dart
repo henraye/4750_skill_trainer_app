@@ -1,12 +1,14 @@
 class Skill {
   final String name;
   final String level;
-  List<String>? roadmap;
+  final List<String>? roadmap;
+  final String? id;
 
   Skill({
     required this.name,
     required this.level,
     this.roadmap,
+    this.id,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,6 +25,7 @@ class Skill {
       level: json['level'],
       roadmap:
           json['roadmap'] != null ? List<String>.from(json['roadmap']) : null,
+      id: json['id'],
     );
   }
 }

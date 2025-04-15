@@ -20,20 +20,126 @@ class OpenAIService {
     return apiKey;
   }
 
-  Future<List<String>> generateRoadmap(String skillName, String level) async {
+  Future<Roadmap> generateRoadmap(String skillName, String level) async {
     try {
       // Check cache first
       try {
         final cachedRoadmap = await _cacheService.getRoadmap(skillName, level);
         if (cachedRoadmap != null) {
           debugPrint('Using cached roadmap for $skillName at $level level');
-          return cachedRoadmap.steps;
+          return cachedRoadmap;
         }
       } catch (e) {
         debugPrint('Error reading from cache: $e');
-        // Continue with API call if cache fails
       }
 
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'messages': [
+            {
+              'role': 'system',
+              'content':
+                  '''You are an expert skill trainer that creates detailed learning roadmaps. 
+              Your response must be a valid JSON object with a "steps" array containing exactly 6 steps.
+              Each step must have:
+              1. A clear description of what to learn
+              2. A detailed explanation of the concept
+              3. A practical exercise or task to practice
+              Format the response as:
+              {
+                "steps": [
+                  {
+                    "description": "Brief title of the step",
+                    "explanation": "Detailed explanation of the concept",
+                    "practicePrompt": "A specific task or exercise to practice"
+                  },
+                  ...
+                ]
+              }''',
+            },
+            {
+              'role': 'user',
+              'content':
+                  '''Create a detailed 6-step learning roadmap for $skillName at $level level.
+              Return the response as a JSON object with a "steps" array.
+              Make the explanations clear and beginner-friendly.
+              Include practical exercises that can be done without external tools.''',
+            },
+          ],
+          'temperature': 0.7,
+          'max_tokens': 2000,
+          'response_format': {'type': 'json_object'},
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['choices'] == null || data['choices'].isEmpty) {
+          throw Exception('Invalid response format from OpenAI');
+        }
+
+        final content = data['choices'][0]['message']['content'];
+        debugPrint('OpenAI Response: $content');
+
+        final Map<String, dynamic> responseJson = jsonDecode(content);
+        if (!responseJson.containsKey('steps')) {
+          throw Exception('Response missing "steps" array');
+        }
+
+        final List<dynamic> stepsJson = responseJson['steps'];
+        final steps = stepsJson
+            .map((step) => RoadmapStep(
+                  description: step['description'],
+                  explanation: step['explanation'],
+                  practicePrompt: step['practicePrompt'],
+                ))
+            .toList();
+
+        if (steps.isEmpty) {
+          throw Exception('No valid steps found in the response');
+        }
+
+        if (steps.length != 6) {
+          debugPrint('Warning: Expected 6 steps but got ${steps.length}');
+        }
+
+        final roadmap = Roadmap(
+          skillName: skillName,
+          level: level,
+          steps: steps,
+          createdAt: DateTime.now(),
+        );
+
+        // Cache the roadmap
+        try {
+          await _cacheService.saveRoadmap(roadmap);
+        } catch (e) {
+          debugPrint('Error saving to cache: $e');
+        }
+
+        return roadmap;
+      } else {
+        debugPrint('OpenAI API Error: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
+        throw Exception('Failed to generate roadmap: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error generating roadmap: $e');
+      if (e.toString().contains('Network is unreachable')) {
+        throw Exception('Network error: Please check your internet connection');
+      }
+      throw Exception('Failed to generate roadmap: $e');
+    }
+  }
+
+  Future<String> askQuestion(String skillName, String question) async {
+    try {
       final response = await http.post(
         Uri.parse(_baseUrl),
         headers: {
@@ -46,26 +152,13 @@ class OpenAIService {
             {
               'role': 'system',
               'content':
-                  '''You are a helpful assistant that creates learning roadmaps for skills. 
-              Your response must follow these rules:
-              1. Each step must start with a number followed by a period (e.g., "1. Step description")
-              2. Each step must be on a new line
-              3. Each step should be clear and actionable
-              4. Steps should build upon each other
-              5. Keep descriptions concise and specific
-              6. Provide exactly 6 steps''',
+                  '''You are a helpful tutor assisting someone learning $skillName.
+              Provide clear, concise answers that are easy to understand.
+              Include examples where appropriate.''',
             },
             {
               'role': 'user',
-              'content':
-                  '''Create a learning roadmap for $skillName at $level level.
-              Format your response exactly like this:
-              1. First step
-              2. Second step
-              3. Third step
-              4. Fourth step
-              5. Fifth step
-              6. Sixth step''',
+              'content': question,
             },
           ],
           'temperature': 0.7,
@@ -79,61 +172,19 @@ class OpenAIService {
           throw Exception('Invalid response format from OpenAI');
         }
 
-        final content = data['choices'][0]['message']['content'];
-        debugPrint('OpenAI Response: $content');
-
-        // Split by newlines and clean up each line
-        final lines = content.split('\n');
-        final steps = <String>[];
-
-        for (final line in lines) {
-          final trimmedLine = line.trim();
-          if (trimmedLine.isEmpty) continue;
-
-          // Check if line starts with a number followed by a period
-          if (RegExp(r'^\d+\.').hasMatch(trimmedLine)) {
-            // Remove the number and period from the start
-            final step = trimmedLine.replaceFirst(RegExp(r'^\d+\.\s*'), '');
-            if (step.isNotEmpty) {
-              steps.add(step);
-            }
-          }
-        }
-
-        if (steps.isEmpty) {
-          throw Exception('No valid steps found in the response');
-        }
-
-        if (steps.length != 6) {
-          debugPrint('Warning: Expected 6 steps but got ${steps.length}');
-        }
-
-        // Cache the roadmap
-        try {
-          final roadmap = Roadmap(
-            skillName: skillName,
-            level: level,
-            steps: steps,
-            createdAt: DateTime.now(),
-          );
-          await _cacheService.saveRoadmap(roadmap);
-        } catch (e) {
-          debugPrint('Error saving to cache: $e');
-          // Continue even if caching fails
-        }
-
-        return steps;
+        final answer = data['choices'][0]['message']['content'];
+        return answer;
       } else {
         debugPrint('OpenAI API Error: ${response.statusCode}');
         debugPrint('Response body: ${response.body}');
-        throw Exception('Failed to generate roadmap: ${response.statusCode}');
+        throw Exception('Failed to get answer: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error generating roadmap: $e');
+      debugPrint('Error getting answer: $e');
       if (e.toString().contains('Network is unreachable')) {
         throw Exception('Network error: Please check your internet connection');
       }
-      throw Exception('Failed to generate roadmap: $e');
+      throw Exception('Failed to get answer: $e');
     }
   }
 }

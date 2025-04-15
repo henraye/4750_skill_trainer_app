@@ -1,7 +1,9 @@
+import 'roadmap.dart';
+
 class Skill {
   final String name;
   final String level;
-  final List<String>? roadmap;
+  final Roadmap? roadmap;
   final String? id;
 
   Skill({
@@ -15,7 +17,7 @@ class Skill {
     return {
       'name': name,
       'level': level,
-      'roadmap': roadmap,
+      'roadmap': roadmap?.toJson(),
     };
   }
 
@@ -24,7 +26,7 @@ class Skill {
       name: json['name'],
       level: json['level'],
       roadmap:
-          json['roadmap'] != null ? List<String>.from(json['roadmap']) : null,
+          json['roadmap'] != null ? Roadmap.fromJson(json['roadmap']) : null,
       id: json['id'],
     );
   }

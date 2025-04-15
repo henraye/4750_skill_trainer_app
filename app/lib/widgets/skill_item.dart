@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../screens/skill_roadmap_screen.dart';
+import '../models/roadmap.dart';
 
 class SkillItem extends StatelessWidget {
   final String letter;
   final String level;
   final String skillName;
-  final List<String>? roadmap;
+  final Roadmap? roadmap;
   final bool showRemoveButton;
   final VoidCallback onRemove;
 
@@ -14,7 +15,7 @@ class SkillItem extends StatelessWidget {
     required this.letter,
     required this.level,
     required this.skillName,
-    required this.roadmap,
+    this.roadmap,
     this.showRemoveButton = false,
     required this.onRemove,
   });

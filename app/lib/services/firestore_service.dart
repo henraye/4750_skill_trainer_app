@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/skill.dart';
+import '../models/roadmap.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -35,7 +37,7 @@ class FirestoreService {
     final docRef = await _userDoc.collection('skills').add({
       'name': skill.name,
       'level': skill.level,
-      'roadmap': skill.roadmap,
+      'roadmap': skill.roadmap?.toJson(),
       'createdAt': FieldValue.serverTimestamp(),
     });
     debugPrint('Added skill with ID: ${docRef.id}');
@@ -65,12 +67,22 @@ class FirestoreService {
           .map((doc) {
             final data = doc.data();
             try {
+              final roadmapData = data['roadmap'];
+              Roadmap? roadmap;
+
+              if (roadmapData != null) {
+                if (roadmapData is Map<String, dynamic>) {
+                  roadmap = Roadmap.fromJson(roadmapData);
+                } else if (roadmapData is String) {
+                  final Map<String, dynamic> json = jsonDecode(roadmapData);
+                  roadmap = Roadmap.fromJson(json);
+                }
+              }
+
               return Skill(
                 name: data['name'] ?? '',
                 level: data['level'] ?? '',
-                roadmap: data['roadmap'] != null
-                    ? List<String>.from(data['roadmap'])
-                    : null,
+                roadmap: roadmap,
                 id: doc.id,
               );
             } catch (e) {

@@ -53,6 +53,48 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your email address';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Password reset email sent. Please check your inbox.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _errorMessage = _getErrorMessage(e.code);
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'An unexpected error occurred. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
@@ -63,6 +105,8 @@ class _SignInScreenState extends State<SignInScreen> {
         return 'The email address is not valid.';
       case 'user-disabled':
         return 'This account has been disabled.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
       default:
         return 'An error occurred during sign in.';
     }
@@ -149,6 +193,14 @@ class _SignInScreenState extends State<SignInScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading ? null : _resetPassword,
+                          child: const Text('Forgot Password?'),
+                        ),
                       ),
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 16),

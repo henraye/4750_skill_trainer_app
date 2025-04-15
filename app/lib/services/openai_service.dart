@@ -3,62 +3,35 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/roadmap.dart';
 import 'roadmap_cache_service.dart';
+import 'package:flutter/foundation.dart';
 
 class OpenAIService {
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
-  static const String _moderationUrl = 'https://api.openai.com/v1/moderations';
   final _cacheService = RoadmapCacheService();
 
   String get _apiKey {
     final apiKey = dotenv.env['OPENAI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('OpenAI API key not found in environment variables');
+      debugPrint(
+          'OpenAI API key not found in .env file. Please add OPENAI_API_KEY=your_key_here to your .env file.');
+      throw Exception(
+          'OpenAI API key not configured. Please check your .env file.');
     }
     return apiKey;
-  }
-
-  Future<bool> checkContentModeration(String content) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_moderationUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'input': content,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final results = data['results'] as List;
-        if (results.isNotEmpty) {
-          final result = results[0];
-          // Check if any category is flagged
-          final categories = result['categories'] as Map<String, dynamic>;
-          return !categories.values.any((value) => value == true);
-        }
-        return true;
-      } else {
-        print('Moderation API Error: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        throw Exception(
-            'Failed to check content moderation: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error checking content moderation: $e');
-      throw Exception('Failed to check content moderation: $e');
-    }
   }
 
   Future<List<String>> generateRoadmap(String skillName, String level) async {
     try {
       // Check cache first
-      final cachedRoadmap = await _cacheService.getRoadmap(skillName, level);
-      if (cachedRoadmap != null) {
-        print('Using cached roadmap for $skillName at $level level');
-        return cachedRoadmap.steps;
+      try {
+        final cachedRoadmap = await _cacheService.getRoadmap(skillName, level);
+        if (cachedRoadmap != null) {
+          debugPrint('Using cached roadmap for $skillName at $level level');
+          return cachedRoadmap.steps;
+        }
+      } catch (e) {
+        debugPrint('Error reading from cache: $e');
+        // Continue with API call if cache fails
       }
 
       final response = await http.post(
@@ -68,7 +41,7 @@ class OpenAIService {
           'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode({
-          'model': 'gpt-4o-mini',
+          'model': 'gpt-4',
           'messages': [
             {
               'role': 'system',
@@ -107,7 +80,7 @@ class OpenAIService {
         }
 
         final content = data['choices'][0]['message']['content'];
-        print('OpenAI Response: $content'); // Debug log
+        debugPrint('OpenAI Response: $content');
 
         // Split by newlines and clean up each line
         final lines = content.split('\n');
@@ -132,26 +105,34 @@ class OpenAIService {
         }
 
         if (steps.length != 6) {
-          print('Warning: Expected 6 steps but got ${steps.length}');
+          debugPrint('Warning: Expected 6 steps but got ${steps.length}');
         }
 
         // Cache the roadmap
-        final roadmap = Roadmap(
-          skillName: skillName,
-          level: level,
-          steps: steps,
-          createdAt: DateTime.now(),
-        );
-        await _cacheService.saveRoadmap(roadmap);
+        try {
+          final roadmap = Roadmap(
+            skillName: skillName,
+            level: level,
+            steps: steps,
+            createdAt: DateTime.now(),
+          );
+          await _cacheService.saveRoadmap(roadmap);
+        } catch (e) {
+          debugPrint('Error saving to cache: $e');
+          // Continue even if caching fails
+        }
 
         return steps;
       } else {
-        print('OpenAI API Error: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        debugPrint('OpenAI API Error: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
         throw Exception('Failed to generate roadmap: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error generating roadmap: $e');
+      debugPrint('Error generating roadmap: $e');
+      if (e.toString().contains('Network is unreachable')) {
+        throw Exception('Network error: Please check your internet connection');
+      }
       throw Exception('Failed to generate roadmap: $e');
     }
   }

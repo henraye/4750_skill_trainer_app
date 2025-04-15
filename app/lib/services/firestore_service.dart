@@ -45,26 +45,43 @@ class FirestoreService {
   Stream<List<Skill>> getSkills() {
     final user = _auth.currentUser;
     if (user == null) {
+      debugPrint('No authenticated user found');
       return Stream.value([]);
     }
 
-    return _userDoc
+    debugPrint('Fetching skills for user: ${user.uid}');
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
         .collection('skills')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-      (snapshot) {
-        return snapshot.docs.map((doc) {
-          final data = doc.data();
-          return Skill(
-            name: data['name'],
-            level: data['level'],
-            roadmap: List<String>.from(data['roadmap']),
-            id: doc.id, // Store the document ID
-          );
-        }).toList();
-      },
-    );
+        .handleError((error) {
+      debugPrint('Error fetching skills: $error');
+      return [];
+    }).map((snapshot) {
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            try {
+              return Skill(
+                name: data['name'] ?? '',
+                level: data['level'] ?? '',
+                roadmap: data['roadmap'] != null
+                    ? List<String>.from(data['roadmap'])
+                    : null,
+                id: doc.id,
+              );
+            } catch (e) {
+              debugPrint('Error parsing skill data: $e');
+              return null;
+            }
+          })
+          .where((skill) => skill != null)
+          .cast<Skill>()
+          .toList();
+    });
   }
 
   // Delete a skill

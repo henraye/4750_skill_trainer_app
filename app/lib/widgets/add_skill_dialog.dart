@@ -33,38 +33,24 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // Step 1: Check if the skill name is appropriate using OpenAI moderation
-      final isValid =
-          await _openAIService.checkContentModeration(_selectedSkill);
-      if (!isValid) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select a different skill')),
-          );
-        }
-        return;
-      }
-
-      // Step 2: Generate a learning roadmap using OpenAI
+      // Generate a learning roadmap using OpenAI
       final roadmap = await _openAIService.generateRoadmap(
         _selectedSkill,
         _selectedLevel,
       );
 
-      // Step 3: Create the skill object with the generated roadmap
+      // Create the skill object with the generated roadmap
       final skill = Skill(
         name: _selectedSkill,
         level: _selectedLevel,
         roadmap: roadmap,
       );
 
-      // Step 4: Save the skill to Firestore
-      // This creates/updates the document in the user's skills subcollection
+      // Save the skill to Firestore
       await _firestoreService.addSkill(skill);
 
-      // Step 5: Update the UI and close the dialog
+      // Close the dialog
       if (mounted) {
-        widget.onAdd(skill); // Update local state
         Navigator.pop(context);
       }
     } catch (e) {

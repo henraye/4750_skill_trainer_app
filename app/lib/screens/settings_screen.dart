@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/skill.dart';
 import 'profile_screen.dart';
 
@@ -12,9 +14,127 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isDarkMode = false;
   bool _notificationsEnabled = true;
-  String _selectedLanguage = 'English';
+  bool _isDeleting = false;
 
-  final List<String> _languages = ['English', 'Spanish', 'French', 'German'];
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  Future<void> _deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      // Show re-authentication dialog
+      final email = user.email;
+      if (email == null) {
+        throw Exception('User email not found');
+      }
+
+      final password = await _showReauthDialog();
+      if (password == null) {
+        setState(() {
+          _isDeleting = false;
+        });
+        return;
+      }
+
+      // Re-authenticate the user
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Delete user's skills and data from Firestore
+      final userDoc = _firestore.collection('users').doc(user.uid);
+      final skillsCollection = userDoc.collection('skills');
+
+      // Get all skills documents
+      final skillsSnapshot = await skillsCollection.get();
+
+      // Delete each skill document
+      for (var doc in skillsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete user document
+      await userDoc.delete();
+
+      // Delete the user's authentication account
+      await user.delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting account: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
+  }
+
+  Future<String?> _showReauthDialog() async {
+    final passwordController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Re-authenticate'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Please enter your password to confirm account deletion.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (passwordController.text.isNotEmpty) {
+                Navigator.pop(context, passwordController.text);
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +167,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _isDarkMode = value;
                       // TODO: Implement theme switching
                     });
-                  },
-                ),
-                ListTile(
-                  title: const Text('Language'),
-                  subtitle: Text(_selectedLanguage),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    _showLanguageDialog();
                   },
                 ),
               ],
@@ -118,9 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(color: Colors.red),
                   ),
                   leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  onTap: () {
-                    _showDeleteAccountDialog();
-                  },
+                  onTap: _isDeleting ? null : _showDeleteAccountDialog,
                 ),
               ],
             ),
@@ -176,38 +286,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showLanguageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _languages.map((language) {
-            return RadioListTile(
-              title: Text(language),
-              value: language,
-              groupValue: _selectedLanguage,
-              onChanged: (value) {
-                setState(() {
-                  _selectedLanguage = value.toString();
-                });
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
   void _showDeleteAccountDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Account'),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to delete your account? This action cannot be undone.',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'This will permanently delete:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text('• Your account and all associated data'),
+            const Text('• Your skills and learning progress'),
+            const Text('• Your profile information'),
+          ],
         ),
         actions: [
           TextButton(
@@ -215,14 +315,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              // TODO: Implement account deletion
-              Navigator.pop(context);
-            },
+            onPressed: _isDeleting
+                ? null
+                : () async {
+                    Navigator.pop(context);
+                    await _deleteAccount();
+                  },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Delete'),
+            child: _isDeleting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text('Delete Account'),
           ),
         ],
       ),

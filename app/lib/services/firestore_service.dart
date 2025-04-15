@@ -43,6 +43,11 @@ class FirestoreService {
 
   // Get all skills for the current user
   Stream<List<Skill>> getSkills() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value([]);
+    }
+
     return _userDoc
         .collection('skills')
         .orderBy('createdAt', descending: true)

@@ -8,6 +8,7 @@ import 'dart:convert';
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const int maxSkillsPerUser = 5;
 
   // Get the current user's document reference
   DocumentReference get _userDoc {
@@ -32,8 +33,28 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  // Get the current number of skills for the user
+  Future<int> getSkillCount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('skills')
+        .count()
+        .get();
+
+    return snapshot.count ?? 0;
+  }
+
   // Add a skill to user's skills collection
   Future<void> addSkill(Skill skill) async {
+    final skillCount = await getSkillCount();
+    if (skillCount >= maxSkillsPerUser) {
+      throw Exception('Maximum number of skills ($maxSkillsPerUser) reached');
+    }
+
     final docRef = await _userDoc.collection('skills').add({
       'name': skill.name,
       'level': skill.level,

@@ -14,6 +14,26 @@ class SkillListScreen extends StatefulWidget {
 class _SkillListScreenState extends State<SkillListScreen> {
   bool _isEditMode = false;
   final _firestoreService = FirestoreService();
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
 
   void _toggleEditMode() {
     setState(() {
@@ -86,6 +106,7 @@ class _SkillListScreenState extends State<SkillListScreen> {
                         ],
                       ),
                       child: TextField(
+                        controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Find Skills',
                           hintStyle: const TextStyle(
@@ -94,8 +115,16 @@ class _SkillListScreenState extends State<SkillListScreen> {
                           ),
                           prefixIcon:
                               const Icon(Icons.menu, color: Color(0xFF49454F)),
-                          suffixIcon: const Icon(Icons.search,
-                              color: Color(0xFF49454F)),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear,
+                                      color: Color(0xFF49454F)),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                  },
+                                )
+                              : const Icon(Icons.search,
+                                  color: Color(0xFF49454F)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(28),
                             borderSide: BorderSide.none,
@@ -162,18 +191,30 @@ class _SkillListScreenState extends State<SkillListScreen> {
                             }
 
                             final skills = snapshot.data!;
-                            if (skills.isEmpty) {
-                              return const Center(
-                                child: Text('No skills added yet'),
+                            final filteredSkills = _searchQuery.isEmpty
+                                ? skills
+                                : skills
+                                    .where((skill) => skill.name
+                                        .toLowerCase()
+                                        .contains(_searchQuery))
+                                    .toList();
+
+                            if (filteredSkills.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  _searchQuery.isEmpty
+                                      ? 'No skills added yet'
+                                      : 'No skills found matching "$_searchQuery"',
+                                ),
                               );
                             }
 
                             return ListView.separated(
-                              itemCount: skills.length,
+                              itemCount: filteredSkills.length,
                               separatorBuilder: (context, index) =>
                                   const Divider(height: 1),
                               itemBuilder: (context, index) {
-                                final skill = skills[index];
+                                final skill = filteredSkills[index];
                                 return SkillItem(
                                   letter: skill.name[0],
                                   level: skill.level,

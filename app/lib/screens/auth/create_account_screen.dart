@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../main_screen.dart';
+import '../../widgets/legal_document_dialog.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -14,20 +15,40 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
   bool _isLoading = false;
   String? _errorMessage;
   bool _isEmailSent = false;
+  bool _acceptPrivacyPolicy = false;
+  bool _acceptTermsOfService = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Request focus after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _emailFocusNode.requestFocus();
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _emailFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _createAccount() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptPrivacyPolicy || !_acceptTermsOfService) {
+      setState(() {
+        _errorMessage =
+            'Please accept both Privacy Policy and Terms of Service';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -92,6 +113,104 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
+  void _showPrivacyPolicy() {
+    showDialog(
+      context: context,
+      builder: (context) => LegalDocumentDialog(
+        title: 'Privacy Policy',
+        content: '''
+Last Updated: ${DateTime.now().toString().split(' ')[0]}
+
+1. Information We Collect
+We collect information that you provide directly to us, including:
+- Email address
+- Skill learning progress
+- User preferences and settings
+
+2. How We Use Your Information
+We use the collected information to:
+- Provide and maintain our service
+- Improve user experience
+- Send you updates and notifications
+
+3. Data Storage and Security
+Your data is stored securely in Firebase and is protected using industry-standard security measures. We implement appropriate technical and organizational measures to protect your personal information.
+
+4. Third-Party Services
+We use the following third-party services:
+- Firebase Authentication for user management
+- Firebase Firestore for data storage
+- OpenAI API for generating learning roadmaps
+
+5. Your Rights
+You have the right to:
+- Access your personal data
+- Correct inaccurate data
+- Request deletion of your data
+- Opt-out of communications
+
+6. Changes to This Policy
+We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.
+
+7. Contact Us
+If you have any questions about this Privacy Policy, please contact us at tran.herny123@gmail.com.
+''',
+      ),
+    );
+  }
+
+  void _showTermsOfService() {
+    showDialog(
+      context: context,
+      builder: (context) => LegalDocumentDialog(
+        title: 'Terms of Service',
+        content: '''
+Last Updated: ${DateTime.now().toString().split(' ')[0]}
+
+1. Acceptance of Terms
+By accessing or using Skill Trainer, you agree to be bound by these Terms of Service.
+
+2. User Accounts
+- You must be at least 13 years old to use this service
+- You are responsible for maintaining the security of your account
+- You must provide accurate and complete information
+
+3. User Content
+-You retain ownership of any content you submit to Skill Trainer. By submitting content, you grant us a limited, non-exclusive, revocable license to use, store, and process your content solely for the purpose of operating and improving the service. We do not claim ownership of your content and will not use it for marketing or commercial purposes without your explicit consent.
+
+4. Prohibited Activities
+You agree not to:
+- Violate any laws or regulations
+- Impersonate others
+- Interfere with the service
+- Use the service for unauthorized purposes
+
+5. Intellectual Property
+- The service and its content are protected by copyright
+- You may not copy, modify, or distribute the service without permission
+
+6. Limitation of Liability
+To the fullest extent permitted by law, we are not liable for:
+- Any indirect, incidental, or consequential damages
+- Loss of data or profits
+- Service interruptions or errors
+
+7. Termination
+We may terminate or suspend your account at any time for violations of these terms.
+
+8. Changes to Terms
+We may modify these terms at any time. Continued use of the service constitutes acceptance of the modified terms.
+
+9. Governing Law
+These terms are governed by the laws of the United States.
+
+10. Contact Information
+For questions about these terms, contact us at tran.herny123@gmail.com.
+''',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,12 +258,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     children: [
                       TextFormField(
                         controller: _emailController,
+                        focusNode: _emailFocusNode,
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
@@ -192,6 +313,47 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      CheckboxListTile(
+                        value: _acceptPrivacyPolicy,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _acceptPrivacyPolicy = value ?? false;
+                          });
+                        },
+                        title: GestureDetector(
+                          onTap: _showPrivacyPolicy,
+                          child: const Text(
+                            'I accept the Privacy Policy',
+                            style: TextStyle(
+                              color: Color(0xFF6750A4),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      CheckboxListTile(
+                        value: _acceptTermsOfService,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _acceptTermsOfService = value ?? false;
+                          });
+                        },
+                        title: GestureDetector(
+                          onTap: _showTermsOfService,
+                          child: const Text(
+                            'I accept the Terms of Service',
+                            style: TextStyle(
+                              color: Color(0xFF6750A4),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
                       ),
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 16),

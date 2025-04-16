@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/skill.dart';
+import '../widgets/legal_document_dialog.dart';
 import 'profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -12,9 +13,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isDarkMode = false;
-  bool _notificationsEnabled = true;
   bool _isDeleting = false;
+  bool _isChangingPassword = false;
 
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -136,6 +136,289 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _changePassword() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _isChangingPassword = true;
+    });
+
+    try {
+      final result = await _showChangePasswordDialog();
+      if (result == null) {
+        setState(() {
+          _isChangingPassword = false;
+        });
+        return;
+      }
+
+      final currentPassword = result['currentPassword'] ?? '';
+      final newPassword = result['newPassword'] ?? '';
+
+      if (currentPassword.isEmpty || newPassword.isEmpty) {
+        throw Exception('Password fields cannot be empty');
+      }
+
+      // Re-authenticate the user
+      final email = user.email;
+      if (email == null) {
+        throw Exception('User email not found');
+      }
+
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Update the password
+      await user.updatePassword(newPassword);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password changed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'wrong-password':
+          errorMessage = 'Current password is incorrect';
+          break;
+        case 'weak-password':
+          errorMessage = 'New password is too weak';
+          break;
+        default:
+          errorMessage = 'An error occurred while changing password';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An unexpected error occurred: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isChangingPassword = false;
+        });
+      }
+    }
+  }
+
+  Future<Map<String, String>?> _showChangePasswordDialog() async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    String? errorMessage;
+
+    return showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: currentPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Current Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: newPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'New Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm New Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (currentPasswordController.text.isEmpty ||
+                    newPasswordController.text.isEmpty ||
+                    confirmPasswordController.text.isEmpty) {
+                  setState(() {
+                    errorMessage = 'Please fill in all fields';
+                  });
+                  return;
+                }
+
+                if (newPasswordController.text.length < 6) {
+                  setState(() {
+                    errorMessage = 'New password must be at least 6 characters';
+                  });
+                  return;
+                }
+
+                if (newPasswordController.text !=
+                    confirmPasswordController.text) {
+                  setState(() {
+                    errorMessage = 'New passwords do not match';
+                  });
+                  return;
+                }
+
+                Navigator.pop(
+                  context,
+                  {
+                    'currentPassword': currentPasswordController.text,
+                    'newPassword': newPasswordController.text,
+                  },
+                );
+              },
+              child: const Text('Change Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    showDialog(
+      context: context,
+      builder: (context) => LegalDocumentDialog(
+        title: 'Privacy Policy',
+        content: '''
+Last Updated: ${DateTime.now().toString().split(' ')[0]}
+
+1. Information We Collect
+We collect information that you provide directly to us, including:
+- Email address
+- Skill learning progress
+- User preferences and settings
+
+2. How We Use Your Information
+We use the collected information to:
+- Provide and maintain our service
+- Improve user experience
+- Send you updates and notifications
+
+3. Data Storage and Security
+Your data is stored securely in Firebase and is protected using industry-standard security measures. We implement appropriate technical and organizational measures to protect your personal information.
+
+4. Third-Party Services
+We use the following third-party services:
+- Firebase Authentication for user management
+- Firebase Firestore for data storage
+- OpenAI API for generating learning roadmaps
+
+5. Your Rights
+You have the right to:
+- Access your personal data
+- Correct inaccurate data
+- Request deletion of your data
+- Opt-out of communications
+
+6. Changes to This Policy
+We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.
+
+7. Contact Us
+If you have any questions about this Privacy Policy, please contact us at tran.herny123@gmail.com.
+''',
+      ),
+    );
+  }
+
+  void _showTermsOfService() {
+    showDialog(
+      context: context,
+      builder: (context) => LegalDocumentDialog(
+        title: 'Terms of Service',
+        content: '''
+Last Updated: ${DateTime.now().toString().split(' ')[0]}
+
+1. Acceptance of Terms
+By accessing or using Skill Trainer, you agree to be bound by these Terms of Service.
+
+2. User Accounts
+- You must be at least 13 years old to use this service
+- You are responsible for maintaining the security of your account
+- You must provide accurate and complete information
+
+3. User Content
+- You retain ownership of any content you submit to Skill Trainer. By submitting content, you grant us a limited, non-exclusive, revocable license to use, store, and process your content solely for the purpose of operating and improving the service. We do not claim ownership of your content and will not use it for marketing or commercial purposes without your explicit consent.
+
+4. Prohibited Activities
+You agree not to:
+- Violate any laws or regulations
+- Impersonate others
+- Interfere with the service
+- Use the service for unauthorized purposes
+
+5. Intellectual Property
+- The service and its content are protected by copyright
+- You may not copy, modify, or distribute the service without permission
+
+6. Limitation of Liability
+To the fullest extent permitted by law, we are not liable for:
+- Any indirect, incidental, or consequential damages
+- Loss of data or profits
+- Service interruptions or errors
+
+7. Termination
+We may terminate or suspend your account at any time for violations of these terms.
+
+8. Changes to Terms
+We may modify these terms at any time. Continued use of the service constitutes acceptance of the modified terms.
+
+9. Governing Law
+These terms are governed by the laws of the United States.
+
+10. Contact Information
+For questions about these terms, contact us at tran.herny123@gmail.com.
+''',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,41 +437,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            // Appearance Section
-            _buildSection(
-              title: 'Appearance',
-              children: [
-                SwitchListTile(
-                  title: const Text('Dark Mode'),
-                  subtitle: const Text('Enable dark theme'),
-                  value: _isDarkMode,
-                  onChanged: (value) {
-                    setState(() {
-                      _isDarkMode = value;
-                      // TODO: Implement theme switching
-                    });
-                  },
-                ),
-              ],
-            ),
-
-            // Notifications Section
-            _buildSection(
-              title: 'Notifications',
-              children: [
-                SwitchListTile(
-                  title: const Text('Push Notifications'),
-                  subtitle: const Text('Receive skill updates and reminders'),
-                  value: _notificationsEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _notificationsEnabled = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-
             // Account Section
             _buildSection(
               title: 'Account',
@@ -197,25 +445,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Change Password'),
                   leading: const Icon(Icons.lock_outline),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Implement password change
-                  },
+                  onTap: _isChangingPassword ? null : _changePassword,
                 ),
                 ListTile(
                   title: const Text('Privacy Policy'),
                   leading: const Icon(Icons.privacy_tip_outlined),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Show privacy policy
-                  },
+                  onTap: _showPrivacyPolicy,
                 ),
                 ListTile(
                   title: const Text('Terms of Service'),
                   leading: const Icon(Icons.description_outlined),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // TODO: Show terms of service
-                  },
+                  onTap: _showTermsOfService,
                 ),
               ],
             ),

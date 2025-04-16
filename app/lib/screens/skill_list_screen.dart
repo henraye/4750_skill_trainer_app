@@ -113,8 +113,8 @@ class _SkillListScreenState extends State<SkillListScreen> {
                             color: Color(0xFF49454F),
                             fontSize: 16,
                           ),
-                          prefixIcon:
-                              const Icon(Icons.menu, color: Color(0xFF49454F)),
+                          prefixIcon: const Icon(Icons.search,
+                              color: Color(0xFF49454F)),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear,
@@ -123,8 +123,7 @@ class _SkillListScreenState extends State<SkillListScreen> {
                                     _searchController.clear();
                                   },
                                 )
-                              : const Icon(Icons.search,
-                                  color: Color(0xFF49454F)),
+                              : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(28),
                             borderSide: BorderSide.none,

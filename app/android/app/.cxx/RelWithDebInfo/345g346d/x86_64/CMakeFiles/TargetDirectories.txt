@@ -1,0 +1,2 @@
+/Users/henryngotran/repos/4750_skill_trainer_app/app/android/app/.cxx/RelWithDebInfo/345g346d/x86_64/CMakeFiles/edit_cache.dir
+/Users/henryngotran/repos/4750_skill_trainer_app/app/android/app/.cxx/RelWithDebInfo/345g346d/x86_64/CMakeFiles/rebuild_cache.dir

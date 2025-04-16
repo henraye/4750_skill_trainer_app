@@ -43,10 +43,37 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // Check if email is verified
+      if (!userCredential.user!.emailVerified) {
+        // Sign out the user
+        await FirebaseAuth.instance.signOut();
+
+        // Show error message
+        setState(() {
+          _errorMessage =
+              'Please verify your email before signing in. Check your inbox for the verification email.';
+        });
+
+        // Optionally, resend verification email
+        await userCredential.user!.sendEmailVerification();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'A new verification email has been sent. Please check your inbox.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        return;
+      }
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = _getErrorMessage(e.code);

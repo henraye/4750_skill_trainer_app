@@ -382,6 +382,7 @@ By accessing or using Skill Trainer, you agree to be bound by these Terms of Ser
 - You must be at least 13 years old to use this service
 - You are responsible for maintaining the security of your account
 - You must provide accurate and complete information
+- You are limited to a maximum of 5 skills in your learning journey at a time (this will be increased in the future)
 
 3. User Content
 - You retain ownership of any content you submit to Skill Trainer. By submitting content, you grant us a limited, non-exclusive, revocable license to use, store, and process your content solely for the purpose of operating and improving the service. We do not claim ownership of your content and will not use it for marketing or commercial purposes without your explicit consent.

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../models/roadmap.dart';
 
 class SkillRoadmapScreen extends StatelessWidget {
   final String skillName;
   final String level;
-  final List<String> roadmap;
+  final Roadmap roadmap;
 
   const SkillRoadmapScreen({
     super.key,
@@ -24,8 +25,9 @@ class SkillRoadmapScreen extends StatelessWidget {
       body: SafeArea(
         child: ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: roadmap.length,
+          itemCount: roadmap.steps.length,
           itemBuilder: (context, index) {
+            final step = roadmap.steps[index];
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
@@ -44,9 +46,9 @@ class SkillRoadmapScreen extends StatelessWidget {
                   // Step Header
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD9BDFE),
-                      borderRadius: const BorderRadius.only(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD9BDFE),
+                      borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
                       ),
@@ -56,7 +58,7 @@ class SkillRoadmapScreen extends StatelessWidget {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
                           ),
@@ -71,12 +73,14 @@ class SkillRoadmapScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Text(
-                          'Step ${index + 1}',
-                          style: const TextStyle(
-                            color: Color(0xFF523C72),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            step.description,
+                            style: const TextStyle(
+                              color: Color(0xFF523C72),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -85,12 +89,34 @@ class SkillRoadmapScreen extends StatelessWidget {
                   // Step Content
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(
-                      roadmap[index],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1D1B20),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.explanation,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF1D1B20),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Practice:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1D1B20),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          step.practicePrompt,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF1D1B20),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

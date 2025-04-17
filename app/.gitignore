@@ -12,6 +12,16 @@
 .swiftpm/
 migrate_working_dir/
 
+# Environment files
+.env
+.env.*
+!.env.example
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -43,3 +53,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/.cxx/
+
+# Generated config file
+lib/config.dart

@@ -57,9 +57,9 @@ class _MainScreenState extends State<MainScreen> {
             body: IndexedStack(
               index: _selectedIndex,
               children: [
-                SkillListScreen(skills: _skills),
-                ProfileScreen(skills: _skills),
-                SettingsScreen(skills: _skills),
+                const SkillListScreen(),
+                const ProfileScreen(),
+                const SettingsScreen(),
               ],
             ),
             bottomNavigationBar: Container(

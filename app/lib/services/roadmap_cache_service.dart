@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/roadmap.dart';
+import 'package:flutter/foundation.dart';
 
 class RoadmapCacheService {
   static const String _storageKey = 'roadmap_cache';
@@ -12,7 +13,7 @@ class RoadmapCacheService {
       try {
         _prefs = await SharedPreferences.getInstance();
       } catch (e) {
-        print('Failed to initialize SharedPreferences: $e');
+        debugPrint('Failed to initialize SharedPreferences: $e');
       }
     }
   }
@@ -25,9 +26,21 @@ class RoadmapCacheService {
       final cacheData = _prefs!.getString(_storageKey);
       if (cacheData == null) return null;
 
-      final List<dynamic> cachedRoadmaps = jsonDecode(cacheData);
-      final roadmaps =
-          cachedRoadmaps.map((json) => Roadmap.fromJson(json)).toList();
+      final Map<String, dynamic> cacheMap = jsonDecode(cacheData);
+      final List<dynamic> cachedRoadmaps = cacheMap['roadmaps'] ?? [];
+
+      final roadmaps = cachedRoadmaps
+          .map((json) {
+            try {
+              return Roadmap.fromJson(json as Map<String, dynamic>);
+            } catch (e) {
+              debugPrint('Error parsing roadmap from cache: $e');
+              return null;
+            }
+          })
+          .where((roadmap) => roadmap != null)
+          .cast<Roadmap>()
+          .toList();
 
       try {
         final roadmap = roadmaps.firstWhere(
@@ -48,7 +61,7 @@ class RoadmapCacheService {
         return null;
       }
     } catch (e) {
-      print('Error reading roadmap from cache: $e');
+      debugPrint('Error reading roadmap from cache: $e');
       return null;
     }
   }
@@ -62,9 +75,26 @@ class RoadmapCacheService {
       List<Roadmap> roadmaps = [];
 
       if (cacheData != null) {
-        final List<dynamic> cachedRoadmaps = jsonDecode(cacheData);
-        roadmaps =
-            cachedRoadmaps.map((json) => Roadmap.fromJson(json)).toList();
+        try {
+          final Map<String, dynamic> cacheMap = jsonDecode(cacheData);
+          final List<dynamic> cachedRoadmaps = cacheMap['roadmaps'] ?? [];
+          roadmaps = cachedRoadmaps
+              .map((json) {
+                try {
+                  return Roadmap.fromJson(json as Map<String, dynamic>);
+                } catch (e) {
+                  debugPrint('Error parsing roadmap from cache: $e');
+                  return null;
+                }
+              })
+              .where((roadmap) => roadmap != null)
+              .cast<Roadmap>()
+              .toList();
+        } catch (e) {
+          debugPrint('Error parsing cache data: $e');
+          // If cache is corrupted, start fresh
+          roadmaps = [];
+        }
       }
 
       // Remove existing roadmap for this skill and level if it exists
@@ -77,7 +107,7 @@ class RoadmapCacheService {
 
       await _saveRoadmaps(roadmaps);
     } catch (e) {
-      print('Error saving roadmap to cache: $e');
+      debugPrint('Error saving roadmap to cache: $e');
     }
   }
 
@@ -85,10 +115,12 @@ class RoadmapCacheService {
     if (_prefs == null) return;
 
     try {
-      final jsonData = roadmaps.map((r) => r.toJson()).toList();
+      final jsonData = {
+        'roadmaps': roadmaps.map((r) => r.toJson()).toList(),
+      };
       await _prefs!.setString(_storageKey, jsonEncode(jsonData));
     } catch (e) {
-      print('Error saving roadmaps to SharedPreferences: $e');
+      debugPrint('Error saving roadmaps to SharedPreferences: $e');
     }
   }
 }

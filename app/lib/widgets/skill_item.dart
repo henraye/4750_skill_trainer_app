@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../screens/skill_roadmap_screen.dart';
+import '../models/roadmap.dart';
 
 class SkillItem extends StatelessWidget {
   final String letter;
   final String level;
   final String skillName;
-  final List<String>? roadmap;
+  final Roadmap? roadmap;
+  final bool showRemoveButton;
   final VoidCallback onRemove;
 
   const SkillItem({
@@ -13,7 +15,8 @@ class SkillItem extends StatelessWidget {
     required this.letter,
     required this.level,
     required this.skillName,
-    required this.roadmap,
+    this.roadmap,
+    this.showRemoveButton = false,
     required this.onRemove,
   });
 
@@ -84,28 +87,29 @@ class SkillItem extends StatelessWidget {
               ),
             ),
 
-            // Remove Button
-            IconButton(
-              onPressed: onRemove,
-              icon: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF49454F),
-                    width: 2,
+            // Remove Button (only shown in edit mode)
+            if (showRemoveButton)
+              IconButton(
+                onPressed: onRemove,
+                icon: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF49454F),
+                      width: 2,
+                    ),
                   ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.close,
-                    size: 16,
-                    color: Color(0xFF49454F),
+                  child: const Center(
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0xFF49454F),
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

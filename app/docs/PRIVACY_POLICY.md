@@ -47,6 +47,13 @@ You can stop all collection of information by the Application easily by uninstal
 
 The Service Provider will retain User Provided data for as long as you use the Application and for a reasonable time thereafter. If you'd like them to delete User Provided Data that you have provided via the Application, please contact them at tran.herny123@gmail.com and they will respond in a reasonable time.
 
+You can request account deletion through the app's Settings screen or by following the instructions at [Account Deletion Request](ACCOUNT_DELETION.md). When you request account deletion:
+
+- Your account and associated data will be deleted within 30 days
+- Some data may be retained for legal or regulatory purposes
+- Aggregated, anonymized analytics data will not be deleted
+- Backup data may be retained for up to 90 days
+
 **Children**
 
 The Service Provider does not use the Application to knowingly solicit data from or market to children under the age of 13.
@@ -70,6 +77,22 @@ By using the Application, you are consenting to the processing of your informati
 **Contact Us**
 
 If you have any questions regarding privacy while using the Application, or have questions about the practices, please contact the Service Provider via email at tran.herny123@gmail.com.
+
+## Data Security
+
+### Encryption in Transit
+All data transmitted between the app and our servers is encrypted using industry-standard Transport Layer Security (TLS) protocols. This includes:
+- User authentication data
+- Skill progress and learning data
+- AI-generated content and recommendations
+- Any other user-generated content
+
+We use the following secure services:
+- Firebase Authentication and Firestore (HTTPS/TLS)
+- OpenAI API (HTTPS/TLS)
+
+### Data Storage
+Your data is stored securely in Firebase and is protected using industry-standard security measures. We implement appropriate technical and organizational measures to protect your personal information.
 
 * * *
 

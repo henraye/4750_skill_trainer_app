@@ -20,7 +20,8 @@ class Categories {
         'Web Development',
         'Mobile App Development',
         'Data Science',
-        'Machine Learning'
+        'Machine Learning',
+        "Java"
       ],
     ),
     Category(

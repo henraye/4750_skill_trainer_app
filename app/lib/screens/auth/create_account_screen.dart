@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../main_screen.dart';
 import '../../widgets/legal_document_dialog.dart';
 import '../../services/legal_document_service.dart';
+import '../../services/firestore_service.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -17,6 +18,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _emailFocusNode = FocusNode();
+  final _firestoreService = FirestoreService();
   bool _isLoading = false;
   String? _errorMessage;
   bool _isEmailSent = false;
@@ -62,6 +64,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+      );
+
+      // Create user document in Firestore
+      await _firestoreService.createUserDocument(
+        email: _emailController.text.trim(),
       );
 
       // Send verification email

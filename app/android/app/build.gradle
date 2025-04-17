@@ -91,10 +91,16 @@ android {
             }
             // Add API key for production
             buildConfigField "String", "OPENAI_API_KEY", "\"${System.getenv('OPENAI_API_KEY')}\""
+            
+            // Generate config.dart before building
+            preBuild.dependsOn('generateConfig')
         }
         debug {
             // Add API key for development
             buildConfigField "String", "OPENAI_API_KEY", "\"${System.getenv('OPENAI_API_KEY')}\""
+            
+            // Generate config.dart before building
+            preBuild.dependsOn('generateConfig')
         }
     }
 }
@@ -108,4 +114,10 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.android.support:multidex:1.0.3'
+}
+
+// Add task to generate config.dart
+task generateConfig(type: Exec) {
+    workingDir '../..'
+    commandLine 'flutter', 'run', 'tools/generate_config.dart'
 }

@@ -10,21 +10,35 @@ import 'screens/auth/create_account_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
-
   try {
-    await SharedPreferences.getInstance();
-  } catch (e) {
-    debugPrint('SharedPreferences initialization failed: $e');
-  }
+    WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(const MyApp());
+    // Initialize Firebase first
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
+
+    // Initialize SharedPreferences
+    await SharedPreferences.getInstance();
+
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    debugPrint('Error during initialization: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Show error UI instead of crashing
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Error initializing app: $e'),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
